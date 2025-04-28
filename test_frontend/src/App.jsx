@@ -5,7 +5,9 @@ import './App.css'
 function App() {
   const [msg, setMsg] = useState("");
 
-  const backendUrl = import.meta.env.VITE_API_URL; // ✅ This replaces process.env...
+  const backendUrl = import.meta.env.VITE_API_URL; 
+  const [beforeUrl, setBeforeUrl] = useState(null);
+  const [afterUrl, setAfterUrl] = useState(null);
   console.log("Backend URL:", backendUrl);
 
   const UploadArea = ({ onFileUpload }) => {
@@ -37,6 +39,53 @@ function App() {
       console.error(error);
     }
   };
+
+  const UploadWithProgress = () => {
+    const [progress, setProgress] = useState(0);
+    const [uploading, setUploading] = useState(false);
+  
+    const uploadFile = (file) => {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('image', file);
+  
+      fetch(`${backendUrl}/api/process`, {
+        method: 'POST',
+        body: formData,
+      }).then(async (res) => {
+        const data = await res.json();
+        setMsg(data.message);
+        setBeforeUrl(data.before_url);
+        setAfterUrl(data.after_url);
+      });
+  
+      // Fake progress (or use progress from backend)
+      let prog = 0;
+      const interval = setInterval(() => {
+        prog += 10;
+        setProgress(prog);
+        if (prog >= 100) {
+          clearInterval(interval);
+          setUploading(false);
+        }
+      }, 200);
+    };
+  
+    return (
+      <>
+        <UploadArea onFileUpload={uploadFile} />
+        {uploading && <progress value={progress} max="100" />}
+      </>
+    );
+  };
+
+  const BeforeAfter = ({ beforeUrl, afterUrl }) => {
+    return (
+      <div className="mt-4">
+        <CompareImage leftImage={beforeUrl} rightImage={afterUrl} />
+      </div>
+    );
+  };
   
   return (
     <div className="App" style={{ padding: '2rem', textAlign: 'center' }}>
@@ -44,7 +93,8 @@ function App() {
       <button onClick={fetchMessage}>Click Me</button>
       <p>{msg}</p>
       <h2 style={{ marginTop: '2rem' }}>Upload an Image</h2>
-      <UploadArea onFileUpload={(file) => console.log("Uploaded file:", file)} />
+      <UploadWithProgress />  {}
+      {beforeUrl && afterUrl && <BeforeAfter beforeUrl={beforeUrl} afterUrl={afterUrl} />}
     </div>
   );
 };
